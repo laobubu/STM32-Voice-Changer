@@ -119,7 +119,7 @@ int main( void )
 	
 		if ( BSP_ACCELERO_Get_Axes( LSM6DSM_X_0_handle, &acceleration ) != COMPONENT_ERROR )
 		{
-			signed int y = acceleration.AXIS_Z / 2; // AXIS_Y ±900 左右在变
+			signed int y = acceleration.AXIS_Z / 2 - 150; // AXIS_Y ±900 左右在变
 			if (y > 400) y = 400;
 			if (y <-300) y =-300;
 			vox_pitch_set(y);
@@ -129,10 +129,18 @@ int main( void )
 
 int vox_play(vox_buf_t *buf) {
 	static int actived = 0;
-	int i, j;
+	int i=1,j;
 	
 	uint16_t *data = buf->data;
-	for (i=j=0; i < buf->len; i++,data++) {
+	union {int16_t s; uint16_t u;} tmp1;
+	
+	tmp1.s = (
+		((int16_t*)audio_out_buffer)[buf->len*2-2] + 
+		((int16_t*)data++)[0]
+	) / 2;
+	audio_out_buffer[0] = audio_out_buffer[1] = tmp1.u;
+	
+	for (j=i*2; i < buf->len; i++,data++) {
     audio_out_buffer[j++] = *data;   // left channel
     audio_out_buffer[j++] = *data;  // right channel
 	}
