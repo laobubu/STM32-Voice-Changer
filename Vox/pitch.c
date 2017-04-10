@@ -6,12 +6,15 @@
 static vox_fft_t fft = {{0}};
 vox_complex_t fft_tmp[VOX_FFTLEN];
 
-static float cutoff   = 20000;  	//Hz
-static float since    = 600;  	  //Hz
+static const float cutoff   = 20000;  	//Hz
+static const float since    = 600;  	  //Hz
 static float shift    = 400;       //Hz
 
-static float lp_since = 10000;  // Hz, where decay starts
-static float lp_decay = 0.4;  // percent per bin
+static const float lp_since = 8000;  // Hz, where decay starts
+static const float lp_decay = 0.8;  // percent per bin
+
+static const float hp_since = 300;  // Hz, where decay starts
+static const float hp_decay = 0.6;  // percent per bin
 
 int vox_init_pitch() {
 	vox_init_fft();
@@ -50,7 +53,7 @@ int vox_proc_pitch(vox_buf_t *buf){
 	
 	//decay. LP
 	
-	writeOffset = lp_since/VOX_FFTRES;
+	writeOffset = lp_since / VOX_FFTRES;
 	vox_complex_t *c_i = fft.fft + writeOffset;
 	float p_i = 1.0f;
 	for (int i = writeOffset; i < VOX_FFTLEN; i++, c_i++) {
@@ -60,6 +63,20 @@ int vox_proc_pitch(vox_buf_t *buf){
 		}
 		c_i->real *= p_i;
 		p_i *= lp_decay;
+	}
+	
+	//decay. HP
+	
+	writeOffset = hp_since / VOX_FFTRES;
+	c_i = fft.fft + writeOffset;
+	p_i = 1.0f;
+	for (int i = writeOffset; i > 0; i--, c_i--) {
+		if (p_i < 0.01f) {
+			memset(fft.fft, 0, i * sizeof(vox_complex_t));
+			break;
+		}
+		c_i->real *= p_i;
+		p_i *= hp_decay;
 	}
 	
 	vox_fft_end(&fft, buf);
