@@ -58,9 +58,14 @@ volatile int16_t audio_out_buffer[AUDIO_OUT_BUF_LEN];
 
 extern SAI_HandleTypeDef haudio_out_sai;
 static void *PCM1774_X_0_handle = NULL;
+
+int MEMSInterrupt = 0;
+SensorAxes_t acceleration;
+static void *LSM6DSM_X_0_handle = NULL;
 /* Private function prototypes -----------------------------------------------*/
 
 /* Private functions ---------------------------------------------------------*/
+void vox_pitch_set(float shiftHz);
 
 /**
   * @brief  Main program
@@ -87,6 +92,13 @@ int main( void )
   /* Configure Audio Input peripheral - DFSDM */  
   BSP_AUDIO_IN_Init(AUDIO_SAMPLING_FREQUENCY, 16, AUDIO_CHANNELS);  
   
+	/* 启动加速度计 */
+	if (BSP_ACCELERO_Init( LSM6DSM_X_0, &LSM6DSM_X_0_handle ) != COMPONENT_OK)
+  {
+    while(1);
+  }
+	BSP_ACCELERO_Sensor_Enable( LSM6DSM_X_0_handle );
+
   /* Start Microphone acquisition */
   BSP_AUDIO_IN_Record(PCM_Buffer, 0);
 	
@@ -99,6 +111,19 @@ int main( void )
 		vox_cycle();
     /* Go to Sleep, everything is done in the interrupt service routines */
     //__WFI();
+		
+		if (MEMSInterrupt) {
+			MEMSInterrupt = 0;
+			//TODO: handle TAP events
+		}
+	
+		if ( BSP_ACCELERO_Get_Axes( LSM6DSM_X_0_handle, &acceleration ) != COMPONENT_ERROR )
+		{
+			signed int y = acceleration.AXIS_Z / 2; // AXIS_Y ±900 左右在变
+			if (y > 400) y = 400;
+			if (y <-300) y =-300;
+			vox_pitch_set(y);
+		}
   }
 }
 
@@ -150,6 +175,16 @@ void BSP_AUDIO_IN_TransferComplete_CallBack(void)
 void BSP_AUDIO_IN_HalfTransfer_CallBack(void)
 {
   AudioProcess();
+}
+
+/**
+* @brief  EXTI line detection callbacks
+* @param  GPIO_Pin: Specifies the pins connected EXTI line
+* @retval None
+*/
+void HAL_GPIO_EXTI_Callback( uint16_t GPIO_Pin )
+{
+  MEMSInterrupt=1;
 }
 
 /**

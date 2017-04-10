@@ -46,6 +46,7 @@ extern "C" {
 /* Includes ------------------------------------------------------------------*/
 #include "cube_hal.h"
 #include "SensorTile.h"
+#include "SensorTile_accelero.h"
 #include "SensorTile_audio_in.h"
 #include "SensorTile_audio_out.h"
 
