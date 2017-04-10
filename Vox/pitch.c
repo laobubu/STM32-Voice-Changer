@@ -4,17 +4,19 @@
 #include "vox-fft.h"
 
 static vox_fft_t fft = {{0}};
-float fft_tmp[VOX_FFTLEN*2];
+vox_complex_t fft_tmp[VOX_FFTLEN];
 
-static const float cutoff   = 4000;  	//Hz
-static const float since    = 600;  	//Hz
-static const float ratio    = 1.7;
-
-static const uint32_t fftBarMax = cutoff / VOX_FFTRES * (ratio>1?1:ratio);
+static float cutoff   = 10000;  	//Hz
+static float since    = 600;  	  //Hz
+static float shift    = -200;       //Hz
 
 int vox_init_pitch() {
 	vox_init_fft();
 	return 0;
+}
+
+void vox_pitch_set(float shiftHz) {
+	shift = shiftHz;
 }
 
 int vox_proc_pitch(vox_buf_t *buf){
@@ -36,17 +38,9 @@ int vox_proc_pitch(vox_buf_t *buf){
 //	
 	vox_fft_begin(&fft, buf);
 	
-	float *dst1 = fft_tmp;
-	int imax = VOX_FFTLEN / 2 / ratio;
-	int isince = since/VOX_FFTRES;
-	if (imax > fftBarMax) imax = fftBarMax;
-	
-	for (int i = isince; i < imax; i++) {
-		float f = i * VOX_FFTRES * ratio;
-		vox_fft_interpolate(&fft, f, dst1);
-		dst1 += 2;
-	}
-	memcpy(fft.fft+isince, fft_tmp, dst1 - fft_tmp);
+	int count = (cutoff - since) / VOX_FFTRES;
+	memcpy(fft_tmp, fft.fft + (int)(since/VOX_FFTRES), count);
+	memcpy(fft.fft + (int)((since+shift)/VOX_FFTRES), fft_tmp, count);
 	
 	vox_fft_end(&fft, buf);
 	return 0;

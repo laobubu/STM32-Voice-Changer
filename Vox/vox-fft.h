@@ -13,12 +13,16 @@
 
 #define VOX_FFTRES ((float)VOX_SPLFREQ / VOX_FFTLEN)  // FFT 分辨率，每一个元素表示的频率跨度，单位Hz
 
+typedef struct _vox_complex {
+	float real, imag;
+} vox_complex_t;
+
 // 初始化，只需要一次
 void vox_init_fft(void);
 
 typedef struct {
 	float lastData[VOX_BUFLEN]; // 上次处理的数据
-	float fft[VOX_FFTLEN*2];   // 你要处理的 FFT 复数数据
+	vox_complex_t fft[VOX_FFTLEN];   // 你要处理的 FFT 复数数据
 	float timeShift; // 正数，时域向前相移
 	float timeRatio; // 输出长度是输入长度的多少倍
 } vox_fft_t;
@@ -34,6 +38,6 @@ typedef struct {
 #define VOX_FLOOR(x)  ((int)(x))
 #define VOX_CEIL(x)  ((int)(0.999999f+(x)))
 
-void vox_fft_interpolate(const vox_fft_t *fft, float f, float *out); // 线性差值求某个频率，输出是复数
+void vox_fft_interpolate(const vox_fft_t *fft, float f, vox_complex_t *out); // 线性差值求某个频率，输出是复数
 
 #endif
