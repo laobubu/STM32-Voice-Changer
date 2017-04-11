@@ -3,7 +3,7 @@
  
  数据格式为 Q15，长度为 （VOX_SPLLEN*2）
 	 前 一半 是老数据，后 一半 才是新数据。这是为了避免衔接时候的毛刺。
-	 播放的时候从 1/4 开始，而且播放前会对 1/4:(1/4 + 16) 做 fade-in
+	 播放的时候从 1/4 开始，而且播放前会对 1/4:(1/4 + VOX_CROSSOVER) 做 fade-in
  */
 
 #ifndef _VoX_H_
@@ -14,6 +14,7 @@
 #define VOX_SPLFREQ 48000   // 采样频率
 #define VOX_SPLLEN  1024    // 每一次实际{获取的|要播放的}采样的长度
 #define VOX_BUFLEN  (VOX_SPLLEN*2)   // 数据处理区长度
+#define VOX_CROSSOVER 32    // 过渡效果的采样数量，不要超过 (VOX_SPLLEN/2)
 
 typedef struct {
 	enum vox_buf_status_t {

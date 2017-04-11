@@ -25,12 +25,12 @@ static int vox_process(vox_buf_t *buf) {
 
 static int __vox_play(vox_buf_t *buf) {
 	// Ìí¼Ó crossover
-	static int16_t lastProcessed[16];
+	static int16_t lastProcessed[VOX_CROSSOVER];
 	int16_t *src1 = lastProcessed,
 					*src2 = buf->data + buf->playOffset; //src2 == dst
-	for (int i=0;i<16;i++) {
+	for (int i=1;i<=VOX_CROSSOVER;i++) {
 		register int32_t s1 = *src1, s2 = *src2, out;
-		out = (( s2 << i ) + ( s1 << (16 - i) )) >> 16;
+		out = (( s2 * i ) + ( s1 * (VOX_CROSSOVER - i) )) / VOX_CROSSOVER;
 		*src2 = out;
 		
 		src1++, src2++;
