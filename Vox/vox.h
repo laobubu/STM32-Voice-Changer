@@ -1,7 +1,9 @@
 /*
  迷之 Voice Process
  
- 数据格式为 Q15，长度为 512
+ 数据格式为 Q15，长度为 （VOX_SPLLEN*2）
+	 前 一半 是老数据，后 一半 才是新数据。这是为了避免衔接时候的毛刺。
+	 播放的时候从 1/4 开始，而且播放前会对 1/4:(1/4 + 16) 做 fade-in
  */
 
 #ifndef _VoX_H_
@@ -9,15 +11,17 @@
 
 #include <stdint.h>
 
-#define VOX_SPLFREQ 48000  // 采样频率
-#define VOX_BUFLEN  1024   // 数据处理区长度
+#define VOX_SPLFREQ 48000   // 采样频率
+#define VOX_SPLLEN  1024    // 每一次实际{获取的|要播放的}采样的长度
+#define VOX_BUFLEN  (VOX_SPLLEN*2)   // 数据处理区长度
 
 typedef struct {
 	enum vox_buf_status_t {
 		VOX_FILLING, VOX_PROCESSING, VOX_PROCESSED,
 	} status;
-	uint32_t len; // length (count) that filled with data.
-	uint16_t data[VOX_BUFLEN];
+	uint32_t len; // length filled; length to be played
+	uint32_t playOffset; // where playing begins
+	int16_t data[VOX_BUFLEN];
 }	vox_buf_t;
 
 #define VOX_BUFCNT 4

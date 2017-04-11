@@ -9,7 +9,7 @@
 
 #include "vox.h"
 
-#define VOX_FFTLEN (VOX_BUFLEN*2)  // 考虑到卷积会利用前面的数据，因此扩宽一点
+#define VOX_FFTLEN (VOX_BUFLEN)
 
 #define VOX_FFTRES ((float)VOX_SPLFREQ / VOX_FFTLEN)  // FFT 分辨率，每一个元素表示的频率跨度，单位Hz
 
@@ -21,10 +21,9 @@ typedef struct _vox_complex {
 void vox_init_fft(void);
 
 typedef struct {
-	float lastData[VOX_BUFLEN]; // 上次处理的数据
 	vox_complex_t fft[VOX_FFTLEN];   // 你要处理的 FFT 复数数据
 	float timeShift; // 正数，时域向前相移
-	float timeRatio; // 输出长度是输入长度的多少倍
+	float timeRatio; // 输出长度是输入长度的多少倍。 不要使用！！！
 } vox_fft_t;
 
 // 每一个轮回，只需要依次……

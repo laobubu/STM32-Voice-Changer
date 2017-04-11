@@ -3,7 +3,6 @@
  *
  *  (C) 2017 laobubu
  *
- * 采用 Q15 格式计算，输入/输出长度为 1024 个元素。
  */
 
 #include <string.h>
@@ -19,6 +18,25 @@ static vox_buf_t *buf_filling = NULL;
 static int vox_process(vox_buf_t *buf) {
 	vox_proc_pitch(buf);
 	return 0;
+}
+
+static int __vox_play(vox_buf_t *buf) {
+	// 添加 crossover
+	static int16_t lastProcessed[16];
+	int16_t *src1 = lastProcessed,
+					*src2 = buf->data + buf->playOffset; //src2 == dst
+	for (int i=0;i<16;i++) {
+		register int32_t s1 = *src1, s2 = *src2, out;
+		out = (( s2 << i ) + ( s1 << (16 - i) )) >> 16;
+		*src2 = out;
+		
+		src1++, src2++;
+	}
+	
+	memcpy(lastProcessed, buf->data + buf->playOffset + buf->len, sizeof(lastProcessed));
+	
+	// 然后播放
+	return vox_play(buf);
 }
 
 /*
@@ -38,20 +56,27 @@ void vox_init() {
  * len    	数据个数，单位是“个”，不是字节
  */
 void vox_feed(uint16_t *data, uint32_t len) {
+	static int16_t old_spl_data[VOX_SPLLEN] = {0};
+	
 	if (buf_filling->status != VOX_FILLING) return;
 	
-	uint32_t 	len1 = VOX_BUFLEN - buf_filling->len, // 实际要拷贝的short个数
+	uint32_t 	len1 = VOX_SPLLEN - buf_filling->len, // 实际要拷贝的short个数
 						len2 = 0; // 拷贝完后还未处理的数量
 	if (len > len1) { len2 = len - len1; } // 进来的数据量有点大
 	else { len1 = len; }
 	
-	memcpy(buf_filling->data + buf_filling->len, data, len1 * 2);
+	memcpy(buf_filling->data + VOX_SPLLEN + buf_filling->len, data, len1*2);
 	buf_filling->len += len1;
 	
-	/* 这个 buffer 是否已经填满？ */
-	if (buf_filling->len >= VOX_BUFLEN) {
+	/* 这个 buffer 是否已经有了足够的新数据？ */
+	if (buf_filling->len >= VOX_SPLLEN) {
+		memcpy(buf_filling->data, old_spl_data, VOX_SPLLEN*2); // 把上次采样的数据 old_spl_data 塞到此 buf 开头
+		memcpy(old_spl_data, buf_filling->data + VOX_SPLLEN, VOX_SPLLEN*2); // 然后把现在新采的数据保存到 old_spl_data
+		buf_filling->playOffset = VOX_SPLLEN/2;
 		buf_filling->status = VOX_PROCESSING; // 标记为可以开始处理了
-		if (++buf_filling >= &vox_bufs[VOX_BUFCNT]) buf_filling = vox_bufs; // 移动指针到下一个 buf
+		
+		// 移动指针到下一个 buf
+		if (++buf_filling >= &vox_bufs[VOX_BUFCNT]) buf_filling = vox_bufs;
 	}
 	
 	if (len2) vox_feed(data + len1, len2);
@@ -66,7 +91,7 @@ void vox_cycle() {
   buf = vox_bufs;
 	while (buf != &vox_bufs[VOX_BUFCNT]) {
 		if (buf->status == VOX_PROCESSED) { 
-			if (0 == vox_play(buf)) {
+			if (0 == __vox_play(buf)) {
 				buf->len = 0;
 				buf->status = VOX_FILLING;
 			} 

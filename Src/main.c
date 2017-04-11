@@ -48,7 +48,7 @@
 #define AUDIO_CHANNELS 				        1
 #define AUDIO_SAMPLING_FREQUENCY 		        VOX_SPLFREQ
 #define AUDIO_IN_BUF_LEN   (AUDIO_SAMPLING_FREQUENCY/1000)
-#define AUDIO_OUT_BUF_LEN  (VOX_BUFLEN *2)  //stereo
+#define AUDIO_OUT_BUF_LEN  (VOX_SPLLEN *2)  //stereo
 
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
@@ -129,18 +129,11 @@ int main( void )
 
 int vox_play(vox_buf_t *buf) {
 	static int actived = 0;
-	int i=1,j;
+	int i,j;
 	
-	uint16_t *data = buf->data;
-	union {int16_t s; uint16_t u;} tmp1;
+	int16_t *data = (int16_t*)buf->data + buf->playOffset;
 	
-	tmp1.s = (
-		((int16_t*)audio_out_buffer)[buf->len*2-2] + 
-		((int16_t*)data++)[0]
-	) / 2;
-	audio_out_buffer[0] = audio_out_buffer[1] = tmp1.u;
-	
-	for (j=i*2; i < buf->len; i++,data++) {
+	for (i=j=0; i < buf->len; i++,data++) {
     audio_out_buffer[j++] = *data;   // left channel
     audio_out_buffer[j++] = *data;  // right channel
 	}

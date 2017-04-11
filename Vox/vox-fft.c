@@ -4,7 +4,7 @@
 
 static char inited = 0;
 static arm_rfft_fast_instance_f32 S;
-static float tmp[VOX_FFTLEN*2];
+static float tmp[VOX_FFTLEN];
 
 void vox_init_fft(void) {
 	if (inited) return;
@@ -13,10 +13,7 @@ void vox_init_fft(void) {
 }
 
 void vox_fft_begin(vox_fft_t *fft, const vox_buf_t *buf) {
-	memcpy(tmp, fft->lastData, sizeof(fft->lastData));
-	arm_q15_to_float((short*)buf->data, tmp+VOX_BUFLEN, VOX_BUFLEN);
-	memcpy(fft->lastData, tmp+VOX_BUFLEN, sizeof(fft->lastData)); //FIXME: 使用 DMA 解决
-	
+	arm_q15_to_float((short*)buf->data, tmp, VOX_BUFLEN);
 	arm_rfft_fast_f32(&S, tmp, (float*)fft->fft, 0);
 	fft->timeShift = 0;
 	fft->timeRatio = 1.0;
@@ -28,12 +25,10 @@ void vox_fft_phase_shift(vox_fft_t *fft, float delta) {
 
 void vox_fft_end(vox_fft_t *fft, vox_buf_t *buf) {
 	buf->len = buf->len * fft->timeRatio;
+	buf->playOffset = buf->playOffset + fft->timeShift;
+	
 	arm_rfft_fast_f32(&S, (float*)fft->fft, tmp, 1);
-	arm_float_to_q15(
-		tmp + VOX_BUFLEN - (int16_t)(fft->timeShift),
-		(short*)buf->data,
-		buf->len
-	);
+	arm_float_to_q15(tmp, (short*)buf->data, VOX_BUFLEN);
 }
 
 
