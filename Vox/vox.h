@@ -24,7 +24,7 @@ typedef struct {
 	int16_t data[VOX_BUFLEN];
 }	vox_buf_t;
 
-#define VOX_BUFCNT 4
+#define VOX_BUFCNT 5
 extern vox_buf_t vox_bufs[VOX_BUFCNT];
 
 void vox_init(void);
