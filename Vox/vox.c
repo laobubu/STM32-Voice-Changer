@@ -8,12 +8,15 @@
 #include <string.h>
 
 #include "vox.h"
+#include "vox-memcpy.h"
 
 int vox_init_pitch(void);
 int vox_proc_pitch(vox_buf_t *buf);
 
 vox_buf_t vox_bufs[VOX_BUFCNT];
 static vox_buf_t *buf_filling = NULL;
+
+static voxmc_handle_t voxmc[2];
 
 static int vox_process(vox_buf_t *buf) {
 	vox_proc_pitch(buf);
@@ -46,6 +49,9 @@ void vox_init() {
 	memset(vox_bufs, 0, sizeof(vox_bufs));
 	buf_filling = vox_bufs;
 	
+	voxmc_init(&voxmc[0]);
+	voxmc_init(&voxmc[1]);
+	
 	vox_init_pitch();
 }
 
@@ -70,10 +76,16 @@ void vox_feed(uint16_t *data, uint32_t len) {
 	
 	/* 这个 buffer 是否已经有了足够的新数据？ */
 	if (buf_filling->len >= VOX_SPLLEN) {
-		memcpy(buf_filling->data, old_spl_data, VOX_SPLLEN*2); // 把上次采样的数据 old_spl_data 塞到此 buf 开头
-		memcpy(old_spl_data, buf_filling->data + VOX_SPLLEN, VOX_SPLLEN*2); // 然后把现在新采的数据保存到 old_spl_data
+		// 把上次采样的数据 old_spl_data 塞到此 buf 开头
+		memcpy(buf_filling->data, old_spl_data, VOX_SPLLEN*2);
+		
+		// 然后把现在新采的数据保存到 old_spl_data
+		// 使用 vox-memcpy 的 DMA 异步处理
+		voxmc_memcpy(&voxmc[0], old_spl_data, buf_filling->data + VOX_SPLLEN, VOX_SPLLEN*2); 
+		
+		// 设置初始参数，然后标记为可以开始处理了
 		buf_filling->playOffset = VOX_SPLLEN/2;
-		buf_filling->status = VOX_PROCESSING; // 标记为可以开始处理了
+		buf_filling->status = VOX_PROCESSING;
 		
 		// 移动指针到下一个 buf
 		if (++buf_filling >= &vox_bufs[VOX_BUFCNT]) buf_filling = vox_bufs;
