@@ -1,7 +1,14 @@
 /*
- * 很多音效处理需要用到 FFT，可以利用这个头文件提供的函数，跳过处理的过程。
+ * SensorTile Voice Process
+ * Do FFT audio process in STM32.
+ *  providing:
+ *    - FFT/iFFT
+ *    - Simple LPH/HPF
+ *    - Interpolate on FFT data
  *
- * 需要注意的是这个玩意儿会拷贝一份上次处理的数据（为了避免卷积等操作上不接下的情况）
+ *  (C) 2017 laobubu
+ *
+ * 很多音效处理需要用到 FFT，可以利用这个头文件提供的函数，跳过处理的过程。
  */
 
 #ifndef _VOX_FFT_H
@@ -38,5 +45,22 @@ typedef struct {
 #define VOX_CEIL(x)  ((int)(0.999999f+(x)))
 
 void vox_fft_interpolate(const vox_fft_t *fft, float f, vox_complex_t *out); // 线性差值求某个频率，输出是复数
+
+/*
+ 简单的 频域滤波器，在频域长这样子（以HPF为例）
+
+   
+1 ↑    ._________
+  |   /
+  |  /
+o +-+--+-------------→ f/Hz
+    |  freq
+    |
+    freq_end
+
+下降是一个斜线，斜率是 v，单位是 1/Hz
+*/
+void vox_fft_lpf(vox_fft_t *fft, const float freq, const float freq_end);
+void vox_fft_hpf(vox_fft_t *fft, const float freq, const float freq_end);
 
 #endif

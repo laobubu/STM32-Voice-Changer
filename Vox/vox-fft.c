@@ -1,3 +1,15 @@
+/**
+ * SensorTile Voice Process
+ * Do FFT audio process in STM32.
+ *  providing:
+ *    - FFT/iFFT
+ *    - Simple LPH/HPF
+ *    - Interpolate on FFT data
+ *
+ *  (C) 2017 laobubu
+ *
+ */
+
 #include "vox-fft.h"
 #include <arm_math.h>
 #include <arm_const_structs.h>
@@ -31,8 +43,42 @@ void vox_fft_end(vox_fft_t *fft, vox_buf_t *buf) {
 	arm_float_to_q15(tmp, (short*)buf->data, VOX_BUFLEN);
 }
 
+void vox_fft_lpf(vox_fft_t *fft, const float freq, const float freq2)
+{
+	int writeOffset = freq / VOX_FFTRES;
+	vox_complex_t *c_i = fft->fft + writeOffset;
+	float p_i = 1.0f;
+	const float v = VOX_FFTRES / (freq2 - freq);
+	for (int i = writeOffset; i < VOX_FFTLEN; i++, c_i++) {
+		if (p_i < 0.01f) {
+			memset(c_i, 0, (VOX_FFTLEN - i) * sizeof(vox_complex_t));
+			break;
+		}
+		c_i->real *= p_i;
+		c_i->imag *= p_i;
+		p_i -= v;
+	}
+}
+
+void vox_fft_hpf(vox_fft_t *fft, const float freq, const float freq2)
+{
+	int writeOffset = freq / VOX_FFTRES;
+	vox_complex_t *c_i = fft->fft + writeOffset;
+	float p_i = 1.0f;
+	const float v = VOX_FFTRES / (freq - freq2);
+	for (int i = writeOffset; i > 0; i--, c_i--) {
+		if (p_i < 0.01f) {
+			memset(fft->fft, 0, i * sizeof(vox_complex_t));
+			break;
+		}
+		c_i->real *= p_i;
+		c_i->imag *= p_i;
+		p_i -= v;
+	}
+}
 
 void vox_fft_interpolate(const vox_fft_t *fft, float f, vox_complex_t *out) {
+	//FIXME: 应该使用 mag/phase 来计算才对
 	const vox_complex_t *src = fft->fft;
 	
 	uint32_t x0i = VOX_FLOOR(f / VOX_FFTRES);
