@@ -6,7 +6,7 @@
 static vox_fft_t fft = {{0}};
 vox_complex_t fft_tmp[VOX_FFTLEN];
 
-static const float cutoff   = 20000;  	//Hz
+static const float cutoff   = VOX_SPLFREQ;  	//Hz
 static const float since    = 100;  	  //Hz
 static float shift    = -400;       //Hz
 
@@ -54,6 +54,20 @@ int vox_proc_pitch(vox_buf_t *buf){
 	vox_fft_hpf(&fft, 400,  -100);
 	vox_fft_hpf(&fft, 300,  -50);
 	vox_fft_hpf(&fft, 200,  0);
+	
+	// filter noise
+	{
+		vox_complex_t *c = fft.fft;
+		int i = VOX_FFTLEN;
+		while (c++,i--) {
+			const float thresh = 5e16;
+			register float r = c->real, i = c->imag;
+			if (r*r+i*i > thresh*thresh) {
+				c->real = 0;
+				c->imag = 0;
+			}
+		}
+	}
 	
 	memcpy(fft_tmp, fft.fft + readOffset,  count * sizeof(vox_complex_t));
 	memcpy(fft.fft + writeOffset, fft_tmp, count * sizeof(vox_complex_t));

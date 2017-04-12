@@ -87,7 +87,7 @@ int main( void )
   
   /* Configure Audio Output peripheral (SAI) and external DAC */
   BSP_AUDIO_OUT_Init(PCM1774_0, &PCM1774_X_0_handle, NULL, 20, AUDIO_SAMPLING_FREQUENCY); 
-  BSP_AUDIO_OUT_SetVolume(PCM1774_X_0_handle, 20);
+  BSP_AUDIO_OUT_SetVolume(PCM1774_X_0_handle, 32);
   
   /* Configure Audio Input peripheral - DFSDM */  
   BSP_AUDIO_IN_Init(AUDIO_SAMPLING_FREQUENCY, 16, AUDIO_CHANNELS);  
