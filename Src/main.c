@@ -61,11 +61,13 @@ static void *PCM1774_X_0_handle = NULL;
 
 int MEMSInterrupt = 0;
 SensorAxes_t acceleration;
+float mroll, mpitch;
 static void *LSM6DSM_X_0_handle = NULL;
 /* Private function prototypes -----------------------------------------------*/
 
 /* Private functions ---------------------------------------------------------*/
-void vox_pitch_set(float shiftHz);
+void vox_pitch_set_shift(float shiftHz);
+void vox_pitch_set_sex(float ratio);
 
 /**
   * @brief  Main program
@@ -119,10 +121,28 @@ int main( void )
 	
 		if ( BSP_ACCELERO_Get_Axes( LSM6DSM_X_0_handle, &acceleration ) != COMPONENT_ERROR )
 		{
-			signed int y = acceleration.AXIS_Z / 2 - 150; // AXIS_Y ±900 左右在变
-			if (y > 400) y = 400;
-			if (y <-300) y =-300;
-			vox_pitch_set(y);
+			
+			const float alpha = 0.5;
+			 
+			static float fXg = 0;
+			static float fYg = 0;
+			static float fZg = 0;
+			
+			fXg = acceleration.AXIS_X * alpha + (fXg * (1.0f - alpha));
+			fYg = acceleration.AXIS_Y * alpha + (fYg * (1.0f - alpha));
+			fZg = acceleration.AXIS_Z * alpha + (fZg * (1.0f - alpha));
+			
+			mroll  = atan2(-fYg, fZg) * 57.295828f;   //向下倒放 +180 正举着 +90 向上平放 0 
+			mpitch = atan2(fXg, sqrt(fYg*fYg + fZg*fZg)) * 57.295828f;   // 左-90 右 +90
+			
+			signed int vox_pitch_shift_hz = (80 - mroll) * 5;
+			if (vox_pitch_shift_hz > 400) vox_pitch_shift_hz = 400;
+			if (vox_pitch_shift_hz <-300) vox_pitch_shift_hz =-300;
+			vox_pitch_set_shift(vox_pitch_shift_hz);
+			
+			float vox_pitch_new_sex = mpitch / 60.0f;
+			if (-0.05f < vox_pitch_new_sex && vox_pitch_new_sex < 0.05f) vox_pitch_new_sex = 0.0f;
+			vox_pitch_set_sex(vox_pitch_new_sex);
 		}
   }
 }

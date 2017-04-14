@@ -1,4 +1,7 @@
+#pragma diag_suppress 2803
+
 #include <string.h>
+#include <arm_math.h>
 
 #include "vox.h"
 #include "vox-fft.h"
@@ -14,6 +17,9 @@ static float shift    = -400;       //Hz
 // 一些滤波器
 
 static vox_eq_line_t filter1lines[] = {
+	// Sex filter
+	{ 50,  1.0f, 500,  1.0f }, // left
+	{ 500, 1.0f, 1000, 1.0f }, // right
 	// 滤掉低频
 	{ 0, 0.7f,	400, 1.0f },
 	{ 0, 0.8f,	300, 1.0f },
@@ -28,8 +34,24 @@ int vox_init_pitch() {
 	return 0;
 }
 
-void vox_pitch_set(float shiftHz) {
+void vox_pitch_set_shift(float shiftHz) {
 	shift = shiftHz;
+}
+
+// 设置性感度， -1.0 ~ 0 偏男性， 0 ~ +1.0 偏女性
+void vox_pitch_set_sex(float ratio) {
+	if (ratio < -1.0f) ratio = -1.0f;
+	else if (ratio > 1.0f) ratio = 1.0f;
+	
+	float center = ratio * 400 + 500;
+	float gain = 1.0f + VOX_ABS(ratio) / 2;
+	filter1lines[0].f2 = center;
+	filter1lines[0].gain2 = gain;
+	vox_eq_compile_line(&filter1lines[0]);
+	
+	filter1lines[1].f1 = center;
+	filter1lines[1].gain2 = gain;
+	vox_eq_compile_line(&filter1lines[1]);
 }
 
 int vox_proc_pitch(vox_buf_t *buf){
@@ -53,7 +75,7 @@ int vox_proc_pitch(vox_buf_t *buf){
 		vox_complex_t *c = fft.fft;
 		int i = VOX_FFTLEN;
 		while (c++,i--) {
-			const float thresh = 5e16;
+			const float thresh = 5e17;
 			register float r = c->real, i = c->imag;
 			if (r*r+i*i > thresh*thresh) {
 				c->real = 0;
