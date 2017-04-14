@@ -1,6 +1,6 @@
-MDK-ARM/
+MDK-ARM/*
 
 !MDK-ARM/RTE
-!MDK-ARM/Project.uvoptx
-!MDK-ARM/Project.uvprojx
-!MDK-ARM/startup_stm32l476xx.s
+!MDK-ARM/*.uvoptx
+!MDK-ARM/*.uvprojx
+!MDK-ARM/*.s
