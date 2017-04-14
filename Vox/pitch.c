@@ -44,9 +44,9 @@ void vox_pitch_set_sex(float ratio) {
 	else if (ratio > 1.0f) ratio = 1.0f;
 	
 	float center = ratio * 400 + 500;
-	float gain = 1.0f + VOX_ABS(ratio) / 2;
+	float gain = 1.0f - VOX_ABS(ratio) / 2;
 	filter1lines[0].f2 = center;
-	filter1lines[0].gain2 = gain;
+	filter1lines[0].gain1 = gain;
 	vox_eq_compile_line(&filter1lines[0]);
 	
 	filter1lines[1].f1 = center;
