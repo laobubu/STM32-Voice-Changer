@@ -147,9 +147,17 @@ int main( void )
   }
 }
 
+char audio_out_passed_half = 1; // 只有在 DMA Audio OUT 到一半以后时，才开始输入新数据
+void BSP_AUDIO_OUT_HalfTransfer_CallBack(void) {
+	audio_out_passed_half = 1;
+}
+
 int vox_play(vox_buf_t *buf) {
 	static int actived = 0;
 	int i,j;
+	
+	if (!audio_out_passed_half) return 1;
+	audio_out_passed_half = 0;
 	
 	int16_t *data = (int16_t*)buf->data + buf->playOffset;
 	
