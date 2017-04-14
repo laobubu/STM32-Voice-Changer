@@ -58,7 +58,8 @@ o +-+--+-------------→ f/Hz
     |
     freq_end
 
-下降是一个斜线，斜率是 v，单位是 1/Hz
+下降是一个斜线，斜率是 v，单位是 1/Hz。
+如果要组合使用简单滤波器，可考虑使用 vox-eq 模块
 */
 void vox_fft_lpf(vox_fft_t *fft, const float freq, const float freq_end);
 void vox_fft_hpf(vox_fft_t *fft, const float freq, const float freq_end);
