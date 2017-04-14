@@ -11,7 +11,7 @@
 
 #include <stdint.h>
 
-#define VOX_SPLFREQ 48000   // 采样频率
+#define VOX_SPLFREQ 32000   // 采样频率
 #define VOX_SPLLEN  1024    // 每一次实际{获取的|要播放的}采样的长度
 #define VOX_BUFLEN  (VOX_SPLLEN*2)   // 数据处理区长度
 #define VOX_CROSSOVER 32    // 过渡效果的采样数量，不要超过 (VOX_SPLLEN/2)
