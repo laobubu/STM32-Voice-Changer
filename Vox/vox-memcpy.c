@@ -38,7 +38,7 @@ void voxmc_init(voxmc_handle_t *handle){	// id = 0,1,2...
 	init->PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
 	init->MemDataAlignment = DMA_MDATAALIGN_BYTE;
 	init->Mode = DMA_NORMAL;
-	init->Priority = DMA_PRIORITY_MEDIUM;
+	init->Priority = DMA_PRIORITY_LOW;
 	
 	HAL_DMA_Init(hdma);
 	
@@ -48,10 +48,25 @@ void voxmc_init(voxmc_handle_t *handle){	// id = 0,1,2...
 
 void voxmc_memcpy(voxmc_handle_t *handle, void *dst, const void*src, unsigned int bytes)
 {
+	if (bytes <= 0) return;
+	
 	DMA_HandleTypeDef *hdma = (DMA_HandleTypeDef*)handle->dma;
 	
 	HAL_DMA_PollForTransfer(hdma, HAL_DMA_FULL_TRANSFER, HAL_MAX_DELAY);
+	hdma->Instance->CCR |= 1UL<<6; // src memory inc enabled
 	HAL_DMA_Start(hdma, (uint32_t)src, (uint32_t)dst, bytes);
+}
+
+void voxmc_memset(voxmc_handle_t *handle, void *dst, const int value, unsigned int bytes)
+{
+	if (bytes <= 0) return;
+	
+	DMA_HandleTypeDef *hdma = (DMA_HandleTypeDef*)handle->dma;
+	
+	HAL_DMA_PollForTransfer(hdma, HAL_DMA_FULL_TRANSFER, HAL_MAX_DELAY);
+	hdma->Instance->CCR &= ~(1UL<<6); // src memory inc disabled
+	handle->_tmp1 = value & 0xFF;
+	HAL_DMA_Start(hdma, (uint32_t)&handle->_tmp1, (uint32_t)dst, bytes);
 }
 
 void voxmc_wait(voxmc_handle_t *handle)
