@@ -6,6 +6,7 @@
 #include "vox.h"
 #include "vox-fft.h"
 #include "vox-eq.h"
+#include "vox-memcpy.h"
 
 static vox_fft_t fft = {{0}};
 vox_complex_t fft_tmp[VOX_FFTLEN];
@@ -13,6 +14,8 @@ vox_complex_t fft_tmp[VOX_FFTLEN];
 static const float cutoff   = VOX_SPLFREQ;  	//Hz
 static const float since    = 100;  	  //Hz
 static float shift    = -400;       //Hz
+
+static voxmc_handle_t mc1, mc2, mc3;
 
 // Ò»Ð©ÂË²¨Æ÷
 
@@ -24,13 +27,18 @@ static vox_eq_line_t filter1lines[] = {
 	{ 0, 0.7f,	400, 1.0f },
 	{ 0, 0.8f,	300, 1.0f },
 	// ÂËµô¸ßÆµ
-	{ 10000, 1.0f,  18000, 0.3f }
+	{ 16000, 1.0f,  20000, 0.6f },
+	{ 9000, 1.0f,  18000, 0.3f },
 };
 static vox_eq_t filter1 = vox_eq_from_lines(filter1lines);
 
 int vox_init_pitch() {
 	vox_init_fft();
 	vox_eq_compile(&filter1);
+	
+	voxmc_init(&mc1);
+	voxmc_init(&mc2);
+	voxmc_init(&mc3);
 	return 0;
 }
 
@@ -70,10 +78,21 @@ int vox_proc_pitch(vox_buf_t *buf){
 	if (count + readOffset  > VOX_FFTLEN) count = VOX_FFTLEN - readOffset ;
 	if (count + writeOffset > VOX_FFTLEN) count = VOX_FFTLEN - writeOffset;
 	
+	// shift
+	memcpy(fft_tmp, fft.fft + readOffset,  count * sizeof(vox_complex_t));
+	
+	voxmc_memcpy(&mc1, fft.fft + writeOffset, fft_tmp, count * sizeof(vox_complex_t));
+	voxmc_memset(&mc2, fft.fft + writeOffset + count, 0, (VOX_FFTLEN - writeOffset - count) * sizeof(vox_complex_t));
+	voxmc_memset(&mc3, fft.fft, 0, writeOffset * sizeof(vox_complex_t));
+	
+	voxmc_wait(&mc1);
+	voxmc_wait(&mc2);
+	voxmc_wait(&mc3);
+	
 	// filter noise
 	{
-		vox_complex_t *c = fft.fft;
-		int i = VOX_FFTLEN;
+		vox_complex_t *c = fft.fft + writeOffset;
+		int i = count;
 		while (c++,i--) {
 			const float thresh = 5e17;
 			register float r = c->real, i = c->imag;
@@ -83,9 +102,6 @@ int vox_proc_pitch(vox_buf_t *buf){
 			}
 		}
 	}
-	
-	memcpy(fft_tmp, fft.fft + readOffset,  count * sizeof(vox_complex_t));
-	memcpy(fft.fft + writeOffset, fft_tmp, count * sizeof(vox_complex_t));
 	
 	vox_eq_apply(&filter1, &fft);
 	
