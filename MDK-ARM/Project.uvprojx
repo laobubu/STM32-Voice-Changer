@@ -599,11 +599,6 @@
               <FilePath>..\Vox\vox.c</FilePath>
             </File>
             <File>
-              <FileName>delay.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Vox\delay.c</FilePath>
-            </File>
-            <File>
               <FileName>vox-fft.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\vox\vox-fft.c</FilePath>

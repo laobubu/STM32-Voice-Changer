@@ -51,13 +51,16 @@ void vox_pitch_set_sex(float ratio) {
 	if (ratio < -1.0f) ratio = -1.0f;
 	else if (ratio > 1.0f) ratio = 1.0f;
 	
-	float center = ratio * 400 + 500;
+	float width = 50, width2 = 200;
+	float center = ratio * 300 + 400;
 	float gain = 1.0f - VOX_ABS(ratio) / 2;
-	filter1lines[0].f2 = center;
+	filter1lines[0].f2 = center - width;
+	filter1lines[0].f1 = filter1lines[0].f2 - width2;
 	filter1lines[0].gain1 = gain;
 	vox_eq_compile_line(&filter1lines[0]);
 	
-	filter1lines[1].f1 = center;
+	filter1lines[1].f1 = center + 50;
+	filter1lines[1].f2 = filter1lines[1].f1 + width2;
 	filter1lines[1].gain2 = gain;
 	vox_eq_compile_line(&filter1lines[1]);
 }
@@ -83,11 +86,11 @@ int vox_proc_pitch(vox_buf_t *buf){
 	
 	voxmc_memcpy(&mc1, fft.fft + writeOffset, fft_tmp, count * sizeof(vox_complex_t));
 	voxmc_memset(&mc2, fft.fft + writeOffset + count, 0, (VOX_FFTLEN - writeOffset - count) * sizeof(vox_complex_t));
-	voxmc_memset(&mc3, fft.fft, 0, writeOffset * sizeof(vox_complex_t));
+	//voxmc_memset(&mc3, fft.fft, 0, writeOffset * sizeof(vox_complex_t));
 	
 	voxmc_wait(&mc1);
 	voxmc_wait(&mc2);
-	voxmc_wait(&mc3);
+	//voxmc_wait(&mc3);
 	
 	// filter noise
 	{
